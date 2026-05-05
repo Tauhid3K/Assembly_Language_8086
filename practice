@@ -1,127 +1,132 @@
-.MODEL SMALL
-.STACK 100H
-
-.DATA
-    ; Menu and Prompts
-    MENU    DB 0DH, 0AH, "--- Arithmetic Menu ---", 0DH, 0AH, "1. Addition", 0DH, 0AH, "2. Subtraction", 0DH, 0AH, "3. Multiplication", 0DH, 0AH, "4. Division", 0DH, 0AH, "5. Exit", 0DH, 0AH, "Choose: $"
-    PRMPT1  DB 0DH, 0AH, "Enter First Number (0-9): $"
-    PRMPT2  DB 0DH, 0AH, "Enter Second Number (0-9): $"
-    RE_MSG  DB 0DH, 0AH, "Result: $"
-    ERR_DIV DB 0DH, 0AH, "Error: Division by zero$"
-    CONT_MSG DB 0DH, 0AH, "Do you want to continue? (1/0): $"
+.model small
+.stack 100h
+.data
+    ; menu and prompts in lowercase
+    menu    db 13, 10, "--- menu ---"
+            db 13, 10, "1. addition"
+            db 13, 10, "2. subtraction"
+            db 13, 10, "3. multiplication"
+            db 13, 10, "4. division"
+            db 13, 10, "5. exit"
+            db 13, 10, "choose option: $"
     
-    NUM1    DB ?
-    NUM2    DB ?
-    CHOICE  DB ?
-
-.CODE
-MAIN PROC
-    MOV AX, @DATA
-    MOV DS, AX
-
-START_PROG:
-    ; 1. Display Menu
-    LEA DX, MENU
-    MOV AH, 09H
-    INT 21H
-
-    ; Get Choice
-    MOV AH, 01H
-    INT 21H
-    SUB AL, '0'
-    MOV CHOICE, AL
+    p1      db 13, 10, "enter first number: $"
+    p2      db 13, 10, "enter second number: $"
+    res     db 13, 10, "result: $"
+    err     db 13, 10, "error: division by zero$"
+    inst    db 13, 10, "continue? (1/0): $"
     
-    ; Check for Exit (Choice 5)
-    CMP AL, 5
-    JE EXIT_PROG
+    n1      db ?
+    n2      db ?
 
-    ; 2. Ask for numbers
-    LEA DX, PRMPT1
-    MOV AH, 09H
-    INT 21H
-    MOV AH, 01H
-    INT 21H
-    SUB AL, '0'
-    MOV NUM1, AL
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
 
-    LEA DX, PRMPT2
-    MOV AH, 09H
-    INT 21H
-    MOV AH, 01H
-    INT 21H
-    SUB AL, '0'
-    MOV NUM2, AL
+start:
+    ; display menu
+    lea dx, menu
+    mov ah, 09h
+    int 21h
 
-    ; 3. Branching based on selection
-    MOV AL, CHOICE
-    CMP AL, 1
-    JE ADDITION
-    CMP AL, 2
-    JE SUBTRACTION
-    CMP AL, 3
-    JE MULTIPLICATION
-    CMP AL, 4
-    JE DIVISION
-    JMP START_PROG ; Invalid choice retry
+    ; get choice
+    mov ah, 01h
+    int 21h
+    sub al, '0'
+    cmp al, 5
+    je exit_prog
+    mov bl, al 
 
-ADDITION:
-    MOV AL, NUM1
-    ADD AL, NUM2
-    JMP DISPLAY_RESULT
+    ; input numbers
+    lea dx, p1
+    mov ah, 09h
+    int 21h
+    mov ah, 01h
+    int 21h
+    sub al, '0'
+    mov n1, al
 
-SUBTRACTION:
-    MOV AL, NUM1
-    SUB AL, NUM2
-    JMP DISPLAY_RESULT
+    lea dx, p2
+    mov ah, 09h
+    int 21h
+    mov ah, 01h
+    int 21h
+    sub al, '0'
+    mov n2, al
 
-MULTIPLICATION:
-    MOV AL, NUM1
-    MOV BL, NUM2
-    MUL BL          ; Result in AL
-    JMP DISPLAY_RESULT
+    ; operations logic
+    cmp bl, 1
+    je do_add
+    cmp bl, 2
+    je do_sub
+    cmp bl, 3
+    je do_mul
+    cmp bl, 4
+    je do_div
+    jmp start
 
-DIVISION:
-    CMP NUM2, 0     ; Handle div by zero
-    JE DIV_ERROR
-    MOV AL, NUM1
-    MOV AH, 0
-    MOV BL, NUM2
-    DIV BL          ; Quotient in AL
-    JMP DISPLAY_RESULT
+do_add:
+    mov al, n1
+    add al, n2
+    mov ah, 0 
+    jmp show
 
-DIV_ERROR:
-    LEA DX, ERR_DIV
-    MOV AH, 09H
-    INT 21H
-    JMP ASK_CONTINUE
+do_sub:
+    mov al, n1
+    sub al, n2
+    mov ah, 0
+    jmp show
 
-DISPLAY_RESULT:
-    ; Store calculation result temporarily
-    MOV BL, AL
-    LEA DX, RE_MSG
-    MOV AH, 09H
-    INT 21H
+do_mul:
+    mov al, n1
+    mul n2    
+    jmp show
 
-    ; Basic result display (Single digit assumed for simplicity per requirement)
-    ; For 2-digit results (like 5+8=13), AAM can be used, but keeping it basic:
-    MOV AL, BL
-    ADD AL, '0'     ; Convert back to ASCII
-    MOV DL, AL
-    MOV AH, 02H
-    INT 21H
+do_div:
+    cmp n2, 0
+    je show_err
+    mov al, n1
+    mov ah, 0
+    div n2    
+    mov ah, 0 
+    jmp show
 
-ASK_CONTINUE:
-    LEA DX, CONT_MSG
-    MOV AH, 09H
-    INT 21H
-    
-    MOV AH, 01H
-    INT 21H
-    CMP AL, '1'
-    JE START_PROG
+show_err:
+    lea dx, err
+    mov ah, 09h
+    int 21h
+    jmp ask
 
-EXIT_PROG:
-    MOV AH, 4CH
-    INT 21H
-MAIN ENDP
-END MAIN
+show:
+    aam 
+    add ax, 3030h 
+    mov bx, ax    
+
+    lea dx, res
+    mov ah, 09h
+    int 21h
+
+    ; print tens digit
+    mov dl, bh
+    mov ah, 02h
+    int 21h
+    ; print units digit
+    mov dl, bl
+    mov ah, 02h
+    int 21h
+
+ask:
+    lea dx, inst
+    mov ah, 09h
+    int 21h
+    mov ah, 01h
+    int 21h
+    cmp al, '1'
+    je start
+
+exit_prog:
+    mov ah, 4ch
+    int 21h
+main endp
+end main
