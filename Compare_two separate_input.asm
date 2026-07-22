@@ -5,7 +5,7 @@
 q1 db 'Enter first number $'
 q2 db 10,13,'Enter second number $'
 r1 db 10,13,'Largest number $'
-r2 db 10,13'They are equal $'
+r2 db 10,13, 'They are equal $'
 num1 db ?
 num2 db ?
 
